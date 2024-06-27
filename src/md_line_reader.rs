@@ -1,4 +1,8 @@
-use std::{fs::File, io::{BufRead, BufReader}, process::exit};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    process::exit,
+};
 
 enum MdLine {
     /// Any line which starts with # will be transfered here.
@@ -27,63 +31,71 @@ enum MdLine {
 }
 
 struct MdLineReader {
-    file: BufReader<File>
+    file: BufReader<File>,
 }
 
 impl MdLineReader {
     pub fn to_mdlines(self) -> Vec<MdLine> {
         let mut in_code_block = false;
 
-        self.file.buffer().lines().map(|line| {
-            if let Ok(line) = line {
-                if in_code_block {
-                    // skip until not find `CodeEnd`
-                    if line.starts_with("```") {
-                        in_code_block = false;
-                        MdLine::CodeEnd
+        self.file
+            .buffer()
+            .lines()
+            .map(|line| {
+                if let Ok(line) = line {
+                    if in_code_block {
+                        // skip until not find `CodeEnd`
+                        if line.starts_with("```") {
+                            in_code_block = false;
+                            MdLine::CodeEnd
+                        } else {
+                            MdLine::Text(line)
+                        }
+                    } else if line.starts_with("#") {
+                        MdLine::Hash(line.clone())
+                    } else if line.starts_with("> ") {
+                        MdLine::Quote(line)
+                    } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
+                        MdLine::TaskLine(line)
+                    } else if line.starts_with("- ") {
+                        MdLine::UList(line)
+                    } else if line.starts_with("---") {
+                        MdLine::HR
+                    } else if line.starts_with("!") {
+                        MdLine::Image(line)
+                    } else if line.starts_with("|") {
+                        MdLine::Table(line)
+                    } else if line.starts_with("```") {
+                        in_code_block = true;
+                        MdLine::CodeStart
+                    } else if line.starts_with(": ") {
+                        MdLine::Definition(line)
                     } else {
-                        MdLine::Text(line)
+                        MdLine::Text(line.clone())
                     }
+                } else {
+                    eprintln!("Error occured while reading {:?}", line);
+                    exit(1);
                 }
-                else if line.starts_with("#") {
-                    MdLine::Hash(line.clone())
-                }
-                else if line.starts_with("> ") {
-                    MdLine::Quote(line)
-                }
-                else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
-                    MdLine::TaskLine(line)
-                }
-                else if line.starts_with("- ") {
-                    MdLine::UList(line)
-                }
-                else if line.starts_with("---") {
-                    MdLine::HR
-                }
-                else if line.starts_with("!") {
-                    MdLine::Image(line)
-                }
-                else if line.starts_with("|") {
-                    MdLine::Table(line)
-                }
-                else if line.starts_with("```") {
-                    in_code_block = true;
-                    MdLine::CodeStart
-                }
-                else if line.starts_with(": ") {
-                    MdLine::Definition(line)
-                }
-                else {
-                    MdLine::Text(line.clone())
-                }
-            } else {
-                eprintln!("Error occured while reading {:?}", line);
-                exit(1);
-            }
-        }).collect::<Vec<MdLine>>()
+            })
+            .collect::<Vec<MdLine>>()
     }
 }
 
 fn starts_with_ordered_list_pattern(line: &str) -> bool {
-    unimplemented!();
+    let mut divs = line.split('.');
+    let before_dots = divs.next().unwrap();
+    if before_dots.parse::<u32>().is_ok() {
+        return true;
+    }
+    false
+}
+
+#[test]
+fn test_ordered_list_check() {
+    assert!(starts_with_ordered_list_pattern("1. jsdf"));
+    assert!(!starts_with_ordered_list_pattern(" 1jsdf"));
+    assert!(!starts_with_ordered_list_pattern(" 1jsdf."));
+    assert!(starts_with_ordered_list_pattern("1.jsdf."));
+    assert!(starts_with_ordered_list_pattern("1. "));
 }
