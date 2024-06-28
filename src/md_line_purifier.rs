@@ -16,6 +16,10 @@ enum PurifiedMdLine {
         level: u8,
         id: String,
     },
+    Quote {
+        nest_level: u8,
+        inside_md: String,
+    },
     FailedText(String),
 }
 
@@ -23,7 +27,7 @@ impl PurifiedMdLine {
     pub fn purify(md_line: MdLine) -> PurifiedMdLine {
         match md_line {
             MdLine::Head(s) => PurifiedMdLine::purify_head(s),
-            MdLine::Quote(_) => todo!(),
+            MdLine::Quote(s) => PurifiedMdLine::purify_quote(s),
             MdLine::OList(_) => todo!(),
             MdLine::UList(_) => todo!(),
             MdLine::Image(_) => todo!(),
@@ -86,8 +90,21 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_quote(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_quote(mut quotes: String) -> PurifiedMdLine {
+        // count ">" and that is the level
+        // everything after is text
+        // series of ">" & after_text is divided by the "Space"
+        if let Some(space_position) = quotes.find(' ') {
+            let data = quotes.split_off(space_position);
+            unsafe {
+                PurifiedMdLine::Quote {
+                    nest_level: quotes.len() as u8,
+                    inside_md: data.get_unchecked(1..).to_string(),
+                }
+            }
+        } else {
+            PurifiedMdLine::FailedText(quotes)
+        }
     }
 
     pub fn purify_olist(&self, data: String) -> PurifiedMdLine {
@@ -148,13 +165,52 @@ mod purifier_testing {
         // test with failed head_text && custom_id spacing
         assert_eq!(
             PurifiedMdLine::purify(MdLine::Head(String::from("## head 2{#head-2}"))),
-            PurifiedMdLine::Head { title: String::from("head 2{#head-2}"), level: 2, id: String::new() }
+            PurifiedMdLine::Head {
+                title: String::from("head 2{#head-2}"),
+                level: 2,
+                id: String::new()
+            }
         );
 
         // test with failed custom_id spacing
         assert_eq!(
             PurifiedMdLine::purify(MdLine::Head(String::from("## head 2 {# head-2}"))),
-            PurifiedMdLine::Head { title: String::from("head 2 {# head-2}"), level: 2, id: String::new() }
+            PurifiedMdLine::Head {
+                title: String::from("head 2 {# head-2}"),
+                level: 2,
+                id: String::new()
+            }
+        );
+    }
+
+    #[test]
+    fn quote_purifier_test() {
+        // test ok
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Quote(String::from("> blockquote"))),
+            PurifiedMdLine::Quote {
+                nest_level: 1,
+                inside_md: String::from("blockquote")
+            }
+        );
+
+
+        // should only trim one space from inside_md
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Quote(String::from("> \t blockquote"))),
+            PurifiedMdLine::Quote {
+                nest_level: 1,
+                inside_md: String::from("\t blockquote")
+            }
+        );
+
+        // test different level and more words
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Quote(String::from(">>> blockquote lask"))),
+            PurifiedMdLine::Quote {
+                nest_level: 3,
+                inside_md: String::from("blockquote lask")
+            }
         );
     }
 }
