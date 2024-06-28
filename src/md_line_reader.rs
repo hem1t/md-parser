@@ -64,7 +64,7 @@ impl MdLineReader {
                         MdLine::UList(line)
                     } else if line.starts_with("---") {
                         MdLine::HR
-                    } else if line.starts_with("!") {
+                    } else if line.starts_with("![") {
                         MdLine::Image(line)
                     } else if line.starts_with("|") {
                         MdLine::Table(line)

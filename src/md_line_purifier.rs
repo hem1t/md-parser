@@ -27,7 +27,12 @@ enum PurifiedMdLine {
     UList {
         list_text: String,
     },
+    Image {
+        alt_text: String,
+        link_text: String,
+    },
     FailedText(String),
+    EmptyLine,
 }
 
 impl PurifiedMdLine {
@@ -37,7 +42,7 @@ impl PurifiedMdLine {
             MdLine::Quote(s) => PurifiedMdLine::purify_quote(s),
             MdLine::OList(s) => PurifiedMdLine::purify_olist(s),
             MdLine::UList(s) => PurifiedMdLine::purify_ulist(s),
-            MdLine::Image(_) => todo!(),
+            MdLine::Image(s) => PurifiedMdLine::purify_image(s),
             MdLine::Table(_) => todo!(),
             MdLine::CodeStart => todo!(),
             MdLine::CodeEnd => todo!(),
@@ -138,8 +143,22 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_image(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_image(data: String) -> PurifiedMdLine {
+        let mut image_text = data.trim().to_owned();
+        // ![alt_text](link_text)
+        if let Some(seperate_pos) = image_text.find("](") {
+            let link_text = image_text.split_off(seperate_pos);
+            PurifiedMdLine::Image {
+                alt_text: image_text.get(2..).unwrap().trim().to_string(),
+                link_text: link_text
+                    .get(2..(link_text.len() - 1))
+                    .unwrap()
+                    .trim()
+                    .to_string(),
+            }
+        } else {
+            PurifiedMdLine::FailedText(data)
+        }
     }
 
     pub fn purify_table(&self, data: String) -> PurifiedMdLine {
@@ -275,6 +294,40 @@ mod purifier_testing {
             PurifiedMdLine::UList {
                 list_text: " hello list is here".to_string()
             }
+        );
+    }
+
+    #[test]
+    fn image_purifier_test() {
+        // test ok
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Image(String::from("![alt text](image.jpg)"))),
+            PurifiedMdLine::Image {
+                alt_text: "alt text".to_string(),
+                link_text: "image.jpg".to_string()
+            }
+        );
+
+        // spaces should be ignored
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Image(String::from("![alt text](image.jpg) "))),
+            PurifiedMdLine::Image {
+                alt_text: "alt text".to_string(),
+                link_text: "image.jpg".to_string()
+            }
+        );
+
+        // space in between braces and exclamation should fail
+        // this will be filtered out in `MdLineReader`
+        // assert_eq!(
+        //     PurifiedMdLine::purify(MdLine::Image(String::from("! [alt text](image.jpg) "))),
+        //     PurifiedMdLine::FailedText("! [alt text](image.jpg) ".to_string())
+        // );
+
+        // space in between [] () should fail
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Image(String::from("![alt text] (image.jpg) "))),
+            PurifiedMdLine::FailedText("![alt text] (image.jpg) ".to_string())
         );
     }
 }
