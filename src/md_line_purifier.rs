@@ -41,10 +41,13 @@ enum PurifiedMdLine {
         task_text: String,
         done: bool,
     },
+    TabbedLine(String),
     FailedText(String),
     EmptyLine,
     CodeStart,
     CodeEnd,
+    HR,
+    Text(String),
 }
 
 impl PurifiedMdLine {
@@ -59,10 +62,10 @@ impl PurifiedMdLine {
             MdLine::CodeStart => PurifiedMdLine::CodeStart,
             MdLine::CodeEnd => PurifiedMdLine::CodeEnd,
             MdLine::Definition(s) => PurifiedMdLine::purify_definition(s),
-            MdLine::TaskLine(s) => PurifiedMdLine::purify_taskline(s), 
-            MdLine::TabbedLine(_) => todo!(),
-            MdLine::HR => todo!(),
-            MdLine::Text(_) => todo!(),
+            MdLine::TaskLine(s) => PurifiedMdLine::purify_taskline(s),
+            MdLine::TabbedLine(s) => PurifiedMdLine::TabbedLine(s),
+            MdLine::HR => PurifiedMdLine::HR,
+            MdLine::Text(s) => PurifiedMdLine::Text(s),
             MdLine::EmptyLine => PurifiedMdLine::EmptyLine,
         }
     }
@@ -214,14 +217,6 @@ impl PurifiedMdLine {
             // reached unreachable!
             PurifiedMdLine::FailedText(data)
         }
-    }
-
-    pub fn purify_tabbedline(&self, data: String) -> PurifiedMdLine {
-        todo!()
-    }
-
-    pub fn purify_text(&self, data: String) -> PurifiedMdLine {
-        todo!()
     }
 }
 
