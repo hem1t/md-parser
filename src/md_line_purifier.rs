@@ -31,6 +31,9 @@ enum PurifiedMdLine {
         alt_text: String,
         link_text: String,
     },
+    Table {
+        row: Vec<String>,
+    },
     FailedText(String),
     EmptyLine,
 }
@@ -43,7 +46,7 @@ impl PurifiedMdLine {
             MdLine::OList(s) => PurifiedMdLine::purify_olist(s),
             MdLine::UList(s) => PurifiedMdLine::purify_ulist(s),
             MdLine::Image(s) => PurifiedMdLine::purify_image(s),
-            MdLine::Table(_) => todo!(),
+            MdLine::Table(s) => PurifiedMdLine::purify_table(s),
             MdLine::CodeStart => todo!(),
             MdLine::CodeEnd => todo!(),
             MdLine::Definition(_) => todo!(),
@@ -161,8 +164,21 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_table(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_table( data: String) -> PurifiedMdLine {
+        let table_data = data.trim().to_owned();
+        if !(table_data.starts_with('|') && table_data.ends_with('|')) {
+            // user can put spaces at end, if spaces then trim and check
+            return PurifiedMdLine::FailedText(data);
+        }
+
+        let mut table_elems = Vec::with_capacity(5);
+        // split and collect all strings
+        for elems in table_data.split('|') {
+            if !elems.is_empty() {
+                table_elems.push(elems.to_owned());
+            }
+        }
+        PurifiedMdLine::Table { row: table_elems }
     }
 
     pub fn purify_definition(&self, data: String) -> PurifiedMdLine {
@@ -328,6 +344,26 @@ mod purifier_testing {
         assert_eq!(
             PurifiedMdLine::purify(MdLine::Image(String::from("![alt text] (image.jpg) "))),
             PurifiedMdLine::FailedText("![alt text] (image.jpg) ".to_string())
+        );
+    }
+
+    #[test]
+    fn table_purifier_test() {
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Table("| hello | world |".to_string())),
+            PurifiedMdLine::Table { row: vec![" hello ".to_string(), " world ".to_string()] }
+        );
+
+        // avoid preceding spaces
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Table("| hello | world | ".to_string())),
+            PurifiedMdLine::Table { row: vec![" hello ".to_string(), " world ".to_string()] }
+        );
+
+        // should only end with |
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Table("| hello | world  ".to_string())),
+            PurifiedMdLine::FailedText("| hello | world  ".to_string())
         );
     }
 }
