@@ -24,6 +24,9 @@ enum PurifiedMdLine {
         list_number: u8,
         list_text: String,
     },
+    UList {
+        list_text: String,
+    },
     FailedText(String),
 }
 
@@ -33,7 +36,7 @@ impl PurifiedMdLine {
             MdLine::Head(s) => PurifiedMdLine::purify_head(s),
             MdLine::Quote(s) => PurifiedMdLine::purify_quote(s),
             MdLine::OList(s) => PurifiedMdLine::purify_olist(s),
-            MdLine::UList(_) => todo!(),
+            MdLine::UList(s) => PurifiedMdLine::purify_ulist(s),
             MdLine::Image(_) => todo!(),
             MdLine::Table(_) => todo!(),
             MdLine::CodeStart => todo!(),
@@ -124,8 +127,15 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_ulist(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_ulist(mut data: String) -> PurifiedMdLine {
+        // cut from first "Space"
+        if let Some(space_position) = data.find(' ') {
+            PurifiedMdLine::UList {
+                list_text: data.split_off(space_position).get(1..).unwrap().to_string(),
+            }
+        } else {
+            PurifiedMdLine::FailedText(data)
+        }
     }
 
     pub fn purify_image(&self, data: String) -> PurifiedMdLine {
@@ -237,7 +247,34 @@ mod purifier_testing {
             }
         );
 
+        // take the space with you
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::OList(String::from("1. \ta list"))),
+            PurifiedMdLine::OList {
+                list_number: 1,
+                list_text: String::from("\ta list")
+            }
+        );
         // test space missing between n. & list_text
         // this case should be filtered out before in MdLine
+    }
+
+    #[test]
+    fn ulist_purifier_test() {
+        // test ok
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::UList("- hello list is here".to_string())),
+            PurifiedMdLine::UList {
+                list_text: "hello list is here".to_string()
+            }
+        );
+
+        // take the spaces with you
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::UList("-  hello list is here".to_string())),
+            PurifiedMdLine::UList {
+                list_text: " hello list is here".to_string()
+            }
+        );
     }
 }
