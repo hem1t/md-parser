@@ -105,9 +105,7 @@ impl PurifiedMdLine {
         // OPTIONAL: after head_text may have space and then a custom_id in curly braces
         let mut custom_id = String::new();
         if !custom_id_part.is_empty() {
-            unsafe {
-                custom_id.push_str(&custom_id_part.get_unchecked(2..(custom_id_part.len() - 1)))
-            }
+            custom_id.push_str(&custom_id_part.get(2..(custom_id_part.len() - 1)).unwrap())
         }
 
         PurifiedMdLine::Head {
@@ -123,11 +121,9 @@ impl PurifiedMdLine {
         // series of ">" & after_text is divided by the "Space"
         if let Some(space_position) = quotes.find(' ') {
             let data = quotes.split_off(space_position);
-            unsafe {
-                PurifiedMdLine::Quote {
-                    nest_level: quotes.len() as u8,
-                    inside_md: data.get_unchecked(1..).to_string(),
-                }
+            PurifiedMdLine::Quote {
+                nest_level: quotes.len() as u8,
+                inside_md: data.get(1..).unwrap().to_string(),
             }
         } else {
             PurifiedMdLine::FailedText(quotes)
@@ -206,12 +202,12 @@ impl PurifiedMdLine {
         if data.starts_with("- [ ] ") {
             PurifiedMdLine::TaskedLine {
                 done: false,
-                task_text: data.split_off(6).to_owned()
+                task_text: data.split_off(6).to_owned(),
             }
         } else if data.starts_with("- [X] ") {
             PurifiedMdLine::TaskedLine {
                 done: true,
-                task_text: data.split_off(6).to_owned()
+                task_text: data.split_off(6).to_owned(),
             }
         } else {
             // reached unreachable!
@@ -395,11 +391,13 @@ mod purifier_testing {
 
     #[test]
     fn definition_purifier_test() {
-       // test all trimmed and saved
-       assert_eq!(
-           PurifiedMdLine::purify(MdLine::Definition(": the definition   \t".to_string())),
-           PurifiedMdLine::Definition { def_text: "the definition".to_string() }
-       );
+        // test all trimmed and saved
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::Definition(": the definition   \t".to_string())),
+            PurifiedMdLine::Definition {
+                def_text: "the definition".to_string()
+            }
+        );
     }
 
     #[test]
@@ -407,11 +405,17 @@ mod purifier_testing {
         // this will only get lines starting with "- [ ] " or "- [X] "
         assert_eq!(
             PurifiedMdLine::purify(MdLine::TaskLine("- [ ] todo 1".to_string())),
-            PurifiedMdLine::TaskedLine { task_text: "todo 1".to_string(), done: false }
+            PurifiedMdLine::TaskedLine {
+                task_text: "todo 1".to_string(),
+                done: false
+            }
         );
         assert_eq!(
             PurifiedMdLine::purify(MdLine::TaskLine("- [X] todo 1".to_string())),
-            PurifiedMdLine::TaskedLine { task_text: "todo 1".to_string(), done: true }
+            PurifiedMdLine::TaskedLine {
+                task_text: "todo 1".to_string(),
+                done: true
+            }
         );
     }
 }

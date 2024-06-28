@@ -78,8 +78,7 @@ impl MdLineReader {
                         MdLine::Definition(line)
                     } else if line.starts_with("\n") {
                         MdLine::EmptyLine
-                    }
-                    else {
+                    } else {
                         MdLine::Text(line.clone())
                     }
                 } else {
@@ -108,4 +107,3 @@ fn test_ordered_list_check() {
     assert!(starts_with_ordered_list_pattern(&String::from("1.jsdf.")));
     assert!(starts_with_ordered_list_pattern(&String::from("1. ")));
 }
-
