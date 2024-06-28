@@ -60,6 +60,8 @@ impl MdLineReader {
                         MdLine::Quote(line)
                     } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
                         MdLine::TaskLine(line)
+                    } else if starts_with_ordered_list_pattern(&line) {
+                        MdLine::OList(line)
                     } else if line.starts_with("- ") {
                         MdLine::UList(line)
                     } else if line.starts_with("---") {
@@ -89,7 +91,7 @@ impl MdLineReader {
     }
 }
 
-fn starts_with_ordered_list_pattern(line: &str) -> bool {
+fn starts_with_ordered_list_pattern(line: &String) -> bool {
     let mut divs = line.split('.');
     let before_dots = divs.next().unwrap();
     if before_dots.parse::<u32>().is_ok() {
@@ -100,10 +102,10 @@ fn starts_with_ordered_list_pattern(line: &str) -> bool {
 
 #[test]
 fn test_ordered_list_check() {
-    assert!(starts_with_ordered_list_pattern("1. jsdf"));
-    assert!(!starts_with_ordered_list_pattern(" 1jsdf"));
-    assert!(!starts_with_ordered_list_pattern(" 1jsdf."));
-    assert!(starts_with_ordered_list_pattern("1.jsdf."));
-    assert!(starts_with_ordered_list_pattern("1. "));
+    assert!(starts_with_ordered_list_pattern(&String::from("1. jsdf")));
+    assert!(!starts_with_ordered_list_pattern(&String::from(" 1jsdf")));
+    assert!(!starts_with_ordered_list_pattern(&String::from(" 1jsdf.")));
+    assert!(starts_with_ordered_list_pattern(&String::from("1.jsdf.")));
+    assert!(starts_with_ordered_list_pattern(&String::from("1. ")));
 }
 
