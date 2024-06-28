@@ -34,8 +34,13 @@ enum PurifiedMdLine {
     Table {
         row: Vec<String>,
     },
+    Definition {
+        def_text: String,
+    },
     FailedText(String),
     EmptyLine,
+    CodeStart,
+    CodeEnd,
 }
 
 impl PurifiedMdLine {
@@ -47,9 +52,9 @@ impl PurifiedMdLine {
             MdLine::UList(s) => PurifiedMdLine::purify_ulist(s),
             MdLine::Image(s) => PurifiedMdLine::purify_image(s),
             MdLine::Table(s) => PurifiedMdLine::purify_table(s),
-            MdLine::CodeStart => todo!(),
-            MdLine::CodeEnd => todo!(),
-            MdLine::Definition(_) => todo!(),
+            MdLine::CodeStart => PurifiedMdLine::CodeStart,
+            MdLine::CodeEnd => PurifiedMdLine::CodeEnd,
+            MdLine::Definition(s) => PurifiedMdLine::purify_definition(s),
             MdLine::TaskLine(_) => todo!(),
             MdLine::TabbedLine(_) => todo!(),
             MdLine::HR => todo!(),
@@ -164,7 +169,7 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_table( data: String) -> PurifiedMdLine {
+    pub fn purify_table(data: String) -> PurifiedMdLine {
         let table_data = data.trim().to_owned();
         if !(table_data.starts_with('|') && table_data.ends_with('|')) {
             // user can put spaces at end, if spaces then trim and check
@@ -181,8 +186,12 @@ impl PurifiedMdLine {
         PurifiedMdLine::Table { row: table_elems }
     }
 
-    pub fn purify_definition(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_definition(data: String) -> PurifiedMdLine {
+        // data is something that starts with ": "
+        // take everything after ": "
+        PurifiedMdLine::Definition {
+            def_text: data.get(2..).unwrap().trim().to_owned(),
+        }
     }
 
     pub fn purify_taskline(&self, data: String) -> PurifiedMdLine {
@@ -351,13 +360,17 @@ mod purifier_testing {
     fn table_purifier_test() {
         assert_eq!(
             PurifiedMdLine::purify(MdLine::Table("| hello | world |".to_string())),
-            PurifiedMdLine::Table { row: vec![" hello ".to_string(), " world ".to_string()] }
+            PurifiedMdLine::Table {
+                row: vec![" hello ".to_string(), " world ".to_string()]
+            }
         );
 
         // avoid preceding spaces
         assert_eq!(
             PurifiedMdLine::purify(MdLine::Table("| hello | world | ".to_string())),
-            PurifiedMdLine::Table { row: vec![" hello ".to_string(), " world ".to_string()] }
+            PurifiedMdLine::Table {
+                row: vec![" hello ".to_string(), " world ".to_string()]
+            }
         );
 
         // should only end with |
@@ -365,5 +378,14 @@ mod purifier_testing {
             PurifiedMdLine::purify(MdLine::Table("| hello | world  ".to_string())),
             PurifiedMdLine::FailedText("| hello | world  ".to_string())
         );
+    }
+
+    #[test]
+    fn definition_purifier_test() {
+       // test all trimmed and saved
+       assert_eq!(
+           PurifiedMdLine::purify(MdLine::Definition(": the definition   \t".to_string())),
+           PurifiedMdLine::Definition { def_text: "the definition".to_string() }
+       );
     }
 }
