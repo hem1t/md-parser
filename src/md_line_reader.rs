@@ -4,6 +4,7 @@ use std::{
     process::exit,
 };
 
+#[derive(Debug)]
 pub(crate) enum MdLine {
     /// Any line which starts with # will be transfered here.
     Head(String),
