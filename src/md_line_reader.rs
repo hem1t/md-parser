@@ -12,7 +12,7 @@ pub(crate) enum MdLine {
     Quote(String),
     /// Line with `n. `
     OList(String),
-    /// Line with `- `
+    /// Line with `- ` TODO: add for "* " "+ "
     UList(String),
     /// Line starting with !
     Image(String),
