@@ -20,6 +20,10 @@ enum PurifiedMdLine {
         nest_level: u8,
         inside_md: String,
     },
+    OList {
+        list_number: u8,
+        list_text: String,
+    },
     FailedText(String),
 }
 
@@ -28,7 +32,7 @@ impl PurifiedMdLine {
         match md_line {
             MdLine::Head(s) => PurifiedMdLine::purify_head(s),
             MdLine::Quote(s) => PurifiedMdLine::purify_quote(s),
-            MdLine::OList(_) => todo!(),
+            MdLine::OList(s) => PurifiedMdLine::purify_olist(s),
             MdLine::UList(_) => todo!(),
             MdLine::Image(_) => todo!(),
             MdLine::Table(_) => todo!(),
@@ -107,8 +111,17 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_olist(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_olist(mut data: String) -> PurifiedMdLine {
+        // find first ". ", which of length 2
+        if let Some(dotspace_position) = data.find(". ") {
+            let text = data.split_off(dotspace_position);
+            PurifiedMdLine::OList {
+                list_number: data.parse::<u8>().unwrap(),
+                list_text: text.get(2..).unwrap().to_string(),
+            }
+        } else {
+            PurifiedMdLine::FailedText(data)
+        }
     }
 
     pub fn purify_ulist(&self, data: String) -> PurifiedMdLine {
@@ -194,7 +207,6 @@ mod purifier_testing {
             }
         );
 
-
         // should only trim one space from inside_md
         assert_eq!(
             PurifiedMdLine::purify(MdLine::Quote(String::from("> \t blockquote"))),
@@ -212,5 +224,20 @@ mod purifier_testing {
                 inside_md: String::from("blockquote lask")
             }
         );
+    }
+
+    #[test]
+    fn olist_purifier_test() {
+        // test ok
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::OList(String::from("1. a list"))),
+            PurifiedMdLine::OList {
+                list_number: 1,
+                list_text: String::from("a list")
+            }
+        );
+
+        // test space missing between n. & list_text
+        // this case should be filtered out before in MdLine
     }
 }
