@@ -37,6 +37,10 @@ enum PurifiedMdLine {
     Definition {
         def_text: String,
     },
+    TaskedLine {
+        task_text: String,
+        done: bool,
+    },
     FailedText(String),
     EmptyLine,
     CodeStart,
@@ -55,11 +59,11 @@ impl PurifiedMdLine {
             MdLine::CodeStart => PurifiedMdLine::CodeStart,
             MdLine::CodeEnd => PurifiedMdLine::CodeEnd,
             MdLine::Definition(s) => PurifiedMdLine::purify_definition(s),
-            MdLine::TaskLine(_) => todo!(),
+            MdLine::TaskLine(s) => PurifiedMdLine::purify_taskline(s), 
             MdLine::TabbedLine(_) => todo!(),
             MdLine::HR => todo!(),
             MdLine::Text(_) => todo!(),
-            MdLine::EmptyLine => todo!(),
+            MdLine::EmptyLine => PurifiedMdLine::EmptyLine,
         }
     }
 
@@ -194,8 +198,22 @@ impl PurifiedMdLine {
         }
     }
 
-    pub fn purify_taskline(&self, data: String) -> PurifiedMdLine {
-        todo!()
+    pub fn purify_taskline(mut data: String) -> PurifiedMdLine {
+        // text will come as either - [ ] or - [X]
+        if data.starts_with("- [ ] ") {
+            PurifiedMdLine::TaskedLine {
+                done: false,
+                task_text: data.split_off(6).to_owned()
+            }
+        } else if data.starts_with("- [X] ") {
+            PurifiedMdLine::TaskedLine {
+                done: true,
+                task_text: data.split_off(6).to_owned()
+            }
+        } else {
+            // reached unreachable!
+            PurifiedMdLine::FailedText(data)
+        }
     }
 
     pub fn purify_tabbedline(&self, data: String) -> PurifiedMdLine {
@@ -387,5 +405,18 @@ mod purifier_testing {
            PurifiedMdLine::purify(MdLine::Definition(": the definition   \t".to_string())),
            PurifiedMdLine::Definition { def_text: "the definition".to_string() }
        );
+    }
+
+    #[test]
+    fn tasked_purifier_test() {
+        // this will only get lines starting with "- [ ] " or "- [X] "
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::TaskLine("- [ ] todo 1".to_string())),
+            PurifiedMdLine::TaskedLine { task_text: "todo 1".to_string(), done: false }
+        );
+        assert_eq!(
+            PurifiedMdLine::purify(MdLine::TaskLine("- [X] todo 1".to_string())),
+            PurifiedMdLine::TaskedLine { task_text: "todo 1".to_string(), done: true }
+        );
     }
 }
