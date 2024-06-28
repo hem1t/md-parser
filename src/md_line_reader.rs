@@ -4,9 +4,9 @@ use std::{
     process::exit,
 };
 
-enum MdLine {
+pub(crate) enum MdLine {
     /// Any line which starts with # will be transfered here.
-    Hash(String),
+    Head(String),
     /// Line which starts with `>`
     Quote(String),
     /// Line with `n. `
@@ -28,9 +28,11 @@ enum MdLine {
     TabbedLine(String),
     HR,
     Text(String),
+    /// start with '\n'
+    EmptyLine,
 }
 
-struct MdLineReader {
+pub(crate) struct MdLineReader {
     file: BufReader<File>,
 }
 
@@ -52,7 +54,7 @@ impl MdLineReader {
                             MdLine::Text(line)
                         }
                     } else if line.starts_with("#") {
-                        MdLine::Hash(line.clone())
+                        MdLine::Head(line.clone())
                     } else if line.starts_with("> ") {
                         MdLine::Quote(line)
                     } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
@@ -66,11 +68,15 @@ impl MdLineReader {
                     } else if line.starts_with("|") {
                         MdLine::Table(line)
                     } else if line.starts_with("```") {
+                        // note in_code_block here
                         in_code_block = true;
                         MdLine::CodeStart
                     } else if line.starts_with(": ") {
                         MdLine::Definition(line)
-                    } else {
+                    } else if line.starts_with("\n") {
+                        MdLine::EmptyLine
+                    }
+                    else {
                         MdLine::Text(line.clone())
                     }
                 } else {
@@ -99,3 +105,4 @@ fn test_ordered_list_check() {
     assert!(starts_with_ordered_list_pattern("1.jsdf."));
     assert!(starts_with_ordered_list_pattern("1. "));
 }
+
