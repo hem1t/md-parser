@@ -1,10 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    process::exit,
-};
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum MdRawLine {
     /// Any line which starts with # will be transfered here.
     Head(String),
@@ -33,61 +27,49 @@ pub(crate) enum MdRawLine {
     EmptyLine,
 }
 
-pub(crate) struct MdLineReader {
-    file: BufReader<File>,
-}
+pub fn to_mdlines(lines: Vec<String>) -> Vec<MdRawLine> {
+    let mut in_code_block = false;
 
-impl MdLineReader {
-    pub fn to_mdlines(self) -> Vec<MdRawLine> {
-        let mut in_code_block = false;
-
-        self.file
-            .buffer()
-            .lines()
-            .map(|line| {
-                if let Ok(line) = line {
-                    if in_code_block {
-                        // skip until not find `CodeEnd`
-                        if line.starts_with("```") {
-                            in_code_block = false;
-                            MdRawLine::CodeEnd
-                        } else {
-                            MdRawLine::Text(line)
-                        }
-                    } else if line.starts_with("#") {
-                        MdRawLine::Head(line.clone())
-                    } else if line.starts_with("> ") {
-                        MdRawLine::Quote(line)
-                    } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
-                        MdRawLine::TaskLine(line)
-                    } else if starts_with_ordered_list_pattern(&line) {
-                        MdRawLine::OList(line)
-                    } else if line.starts_with("- ") {
-                        MdRawLine::UList(line)
-                    } else if line.starts_with("---") {
-                        MdRawLine::HR
-                    } else if line.starts_with("![") {
-                        MdRawLine::Image(line)
-                    } else if line.starts_with("|") {
-                        MdRawLine::Table(line)
-                    } else if line.starts_with("```") {
-                        // note in_code_block here
-                        in_code_block = true;
-                        MdRawLine::CodeStart
-                    } else if line.starts_with(": ") {
-                        MdRawLine::Definition(line)
-                    } else if line.starts_with("\n") {
-                        MdRawLine::EmptyLine
-                    } else {
-                        MdRawLine::Text(line.clone())
-                    }
+    lines
+        .into_iter()
+        .map(|line| {
+            if in_code_block {
+                // skip until not find `CodeEnd`
+                if line.starts_with("```") {
+                    in_code_block = false;
+                    MdRawLine::CodeEnd
                 } else {
-                    eprintln!("Error occured while reading {:?}", line);
-                    exit(1);
+                    MdRawLine::Text(line)
                 }
-            })
-            .collect::<Vec<MdRawLine>>()
-    }
+            } else if line.starts_with("#") {
+                MdRawLine::Head(line.clone())
+            } else if line.starts_with("> ") {
+                MdRawLine::Quote(line)
+            } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
+                MdRawLine::TaskLine(line)
+            } else if starts_with_ordered_list_pattern(&line) {
+                MdRawLine::OList(line)
+            } else if line.starts_with("- ") {
+                MdRawLine::UList(line)
+            } else if line.starts_with("---") {
+                MdRawLine::HR
+            } else if line.starts_with("![") {
+                MdRawLine::Image(line)
+            } else if line.starts_with("|") {
+                MdRawLine::Table(line)
+            } else if line.starts_with("```") {
+                // note in_code_block here
+                in_code_block = true;
+                MdRawLine::CodeStart
+            } else if line.starts_with(": ") {
+                MdRawLine::Definition(line)
+            } else if line.starts_with("\n") {
+                MdRawLine::EmptyLine
+            } else {
+                MdRawLine::Text(line.clone())
+            }
+        })
+        .collect::<Vec<MdRawLine>>()
 }
 
 fn starts_with_ordered_list_pattern(line: &String) -> bool {

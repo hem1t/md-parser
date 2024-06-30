@@ -1,4 +1,4 @@
-use crate::md_line_reader::MdRawLine;
+use crate::md_line_reader::{to_mdlines, MdRawLine};
 
 ///
 /// Here lies implimentations for MdLine
@@ -18,7 +18,7 @@ enum PurifiedMdLine {
     },
     Quote {
         nest_level: u8,
-        inside_md: String,
+        inside_md: Box<PurifiedMdLine>,
     },
     OList {
         list_number: u8,
@@ -123,7 +123,12 @@ impl PurifiedMdLine {
             let data = quotes.split_off(space_position);
             PurifiedMdLine::Quote {
                 nest_level: quotes.len() as u8,
-                inside_md: data.get(1..).unwrap().to_string(),
+                inside_md: Box::new(PurifiedMdLine::purify(
+                    to_mdlines(vec![data.get(1..).unwrap().to_string()])
+                        .first()
+                        .unwrap()
+                        .clone(),
+                )),
             }
         } else {
             PurifiedMdLine::FailedText(quotes)
@@ -266,7 +271,7 @@ mod purifier_testing {
             PurifiedMdLine::purify(MdRawLine::Quote(String::from("> blockquote"))),
             PurifiedMdLine::Quote {
                 nest_level: 1,
-                inside_md: String::from("blockquote")
+                inside_md: Box::new(PurifiedMdLine::Text("blockquote".to_string()))
             }
         );
 
@@ -275,7 +280,7 @@ mod purifier_testing {
             PurifiedMdLine::purify(MdRawLine::Quote(String::from("> \t blockquote"))),
             PurifiedMdLine::Quote {
                 nest_level: 1,
-                inside_md: String::from("\t blockquote")
+                inside_md: Box::new(PurifiedMdLine::Text(String::from("\t blockquote")))
             }
         );
 
@@ -284,7 +289,21 @@ mod purifier_testing {
             PurifiedMdLine::purify(MdRawLine::Quote(String::from(">>> blockquote lask"))),
             PurifiedMdLine::Quote {
                 nest_level: 3,
-                inside_md: String::from("blockquote lask")
+                inside_md: Box::new(PurifiedMdLine::Text(String::from("blockquote lask")))
+            }
+        );
+
+        // add some heading
+        // hope this works for every single of them
+        assert_eq!(
+            PurifiedMdLine::purify(MdRawLine::Quote(String::from(">>> # blockquote lask"))),
+            PurifiedMdLine::Quote {
+                nest_level: 3,
+                inside_md: Box::new(PurifiedMdLine::Head {
+                    level: 1,
+                    title: String::from("blockquote lask"),
+                    id: String::new()
+                })
             }
         );
     }
