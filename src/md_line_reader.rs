@@ -5,7 +5,7 @@ use std::{
 };
 
 #[derive(Debug)]
-pub(crate) enum MdLine {
+pub(crate) enum MdRawLine {
     /// Any line which starts with # will be transfered here.
     Head(String),
     /// Line which starts with `>`
@@ -38,7 +38,7 @@ pub(crate) struct MdLineReader {
 }
 
 impl MdLineReader {
-    pub fn to_mdlines(self) -> Vec<MdLine> {
+    pub fn to_mdlines(self) -> Vec<MdRawLine> {
         let mut in_code_block = false;
 
         self.file
@@ -50,43 +50,43 @@ impl MdLineReader {
                         // skip until not find `CodeEnd`
                         if line.starts_with("```") {
                             in_code_block = false;
-                            MdLine::CodeEnd
+                            MdRawLine::CodeEnd
                         } else {
-                            MdLine::Text(line)
+                            MdRawLine::Text(line)
                         }
                     } else if line.starts_with("#") {
-                        MdLine::Head(line.clone())
+                        MdRawLine::Head(line.clone())
                     } else if line.starts_with("> ") {
-                        MdLine::Quote(line)
+                        MdRawLine::Quote(line)
                     } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
-                        MdLine::TaskLine(line)
+                        MdRawLine::TaskLine(line)
                     } else if starts_with_ordered_list_pattern(&line) {
-                        MdLine::OList(line)
+                        MdRawLine::OList(line)
                     } else if line.starts_with("- ") {
-                        MdLine::UList(line)
+                        MdRawLine::UList(line)
                     } else if line.starts_with("---") {
-                        MdLine::HR
+                        MdRawLine::HR
                     } else if line.starts_with("![") {
-                        MdLine::Image(line)
+                        MdRawLine::Image(line)
                     } else if line.starts_with("|") {
-                        MdLine::Table(line)
+                        MdRawLine::Table(line)
                     } else if line.starts_with("```") {
                         // note in_code_block here
                         in_code_block = true;
-                        MdLine::CodeStart
+                        MdRawLine::CodeStart
                     } else if line.starts_with(": ") {
-                        MdLine::Definition(line)
+                        MdRawLine::Definition(line)
                     } else if line.starts_with("\n") {
-                        MdLine::EmptyLine
+                        MdRawLine::EmptyLine
                     } else {
-                        MdLine::Text(line.clone())
+                        MdRawLine::Text(line.clone())
                     }
                 } else {
                     eprintln!("Error occured while reading {:?}", line);
                     exit(1);
                 }
             })
-            .collect::<Vec<MdLine>>()
+            .collect::<Vec<MdRawLine>>()
     }
 }
 

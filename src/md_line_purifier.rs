@@ -1,4 +1,4 @@
-use crate::md_line_reader::MdLine;
+use crate::md_line_reader::MdRawLine;
 
 ///
 /// Here lies implimentations for MdLine
@@ -51,22 +51,22 @@ enum PurifiedMdLine {
 }
 
 impl PurifiedMdLine {
-    pub fn purify(md_line: MdLine) -> PurifiedMdLine {
+    pub fn purify(md_line: MdRawLine) -> PurifiedMdLine {
         match md_line {
-            MdLine::Head(s) => PurifiedMdLine::purify_head(s),
-            MdLine::Quote(s) => PurifiedMdLine::purify_quote(s),
-            MdLine::OList(s) => PurifiedMdLine::purify_olist(s),
-            MdLine::UList(s) => PurifiedMdLine::purify_ulist(s),
-            MdLine::Image(s) => PurifiedMdLine::purify_image(s),
-            MdLine::Table(s) => PurifiedMdLine::purify_table(s),
-            MdLine::CodeStart => PurifiedMdLine::CodeStart,
-            MdLine::CodeEnd => PurifiedMdLine::CodeEnd,
-            MdLine::Definition(s) => PurifiedMdLine::purify_definition(s),
-            MdLine::TaskLine(s) => PurifiedMdLine::purify_taskline(s),
-            MdLine::TabbedLine(s) => PurifiedMdLine::TabbedLine(s),
-            MdLine::HR => PurifiedMdLine::HR,
-            MdLine::Text(s) => PurifiedMdLine::Text(s),
-            MdLine::EmptyLine => PurifiedMdLine::EmptyLine,
+            MdRawLine::Head(s) => PurifiedMdLine::purify_head(s),
+            MdRawLine::Quote(s) => PurifiedMdLine::purify_quote(s),
+            MdRawLine::OList(s) => PurifiedMdLine::purify_olist(s),
+            MdRawLine::UList(s) => PurifiedMdLine::purify_ulist(s),
+            MdRawLine::Image(s) => PurifiedMdLine::purify_image(s),
+            MdRawLine::Table(s) => PurifiedMdLine::purify_table(s),
+            MdRawLine::CodeStart => PurifiedMdLine::CodeStart,
+            MdRawLine::CodeEnd => PurifiedMdLine::CodeEnd,
+            MdRawLine::Definition(s) => PurifiedMdLine::purify_definition(s),
+            MdRawLine::TaskLine(s) => PurifiedMdLine::purify_taskline(s),
+            MdRawLine::TabbedLine(s) => PurifiedMdLine::TabbedLine(s),
+            MdRawLine::HR => PurifiedMdLine::HR,
+            MdRawLine::Text(s) => PurifiedMdLine::Text(s),
+            MdRawLine::EmptyLine => PurifiedMdLine::EmptyLine,
         }
     }
 
@@ -224,7 +224,7 @@ mod purifier_testing {
     fn head_purifier_test() {
         // test with proper spacing
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Head(String::from("## head 2 {#head-2}"))),
+            PurifiedMdLine::purify(MdRawLine::Head(String::from("## head 2 {#head-2}"))),
             PurifiedMdLine::Head {
                 title: String::from("head 2"),
                 level: 2,
@@ -234,13 +234,13 @@ mod purifier_testing {
 
         // test with failed hash spacing
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Head(String::from("##head 2 {#head-2}"))),
+            PurifiedMdLine::purify(MdRawLine::Head(String::from("##head 2 {#head-2}"))),
             PurifiedMdLine::FailedText(String::from("##head 2 {#head-2}"))
         );
 
         // test with failed head_text && custom_id spacing
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Head(String::from("## head 2{#head-2}"))),
+            PurifiedMdLine::purify(MdRawLine::Head(String::from("## head 2{#head-2}"))),
             PurifiedMdLine::Head {
                 title: String::from("head 2{#head-2}"),
                 level: 2,
@@ -250,7 +250,7 @@ mod purifier_testing {
 
         // test with failed custom_id spacing
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Head(String::from("## head 2 {# head-2}"))),
+            PurifiedMdLine::purify(MdRawLine::Head(String::from("## head 2 {# head-2}"))),
             PurifiedMdLine::Head {
                 title: String::from("head 2 {# head-2}"),
                 level: 2,
@@ -263,7 +263,7 @@ mod purifier_testing {
     fn quote_purifier_test() {
         // test ok
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Quote(String::from("> blockquote"))),
+            PurifiedMdLine::purify(MdRawLine::Quote(String::from("> blockquote"))),
             PurifiedMdLine::Quote {
                 nest_level: 1,
                 inside_md: String::from("blockquote")
@@ -272,7 +272,7 @@ mod purifier_testing {
 
         // should only trim one space from inside_md
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Quote(String::from("> \t blockquote"))),
+            PurifiedMdLine::purify(MdRawLine::Quote(String::from("> \t blockquote"))),
             PurifiedMdLine::Quote {
                 nest_level: 1,
                 inside_md: String::from("\t blockquote")
@@ -281,7 +281,7 @@ mod purifier_testing {
 
         // test different level and more words
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Quote(String::from(">>> blockquote lask"))),
+            PurifiedMdLine::purify(MdRawLine::Quote(String::from(">>> blockquote lask"))),
             PurifiedMdLine::Quote {
                 nest_level: 3,
                 inside_md: String::from("blockquote lask")
@@ -293,7 +293,7 @@ mod purifier_testing {
     fn olist_purifier_test() {
         // test ok
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::OList(String::from("1. a list"))),
+            PurifiedMdLine::purify(MdRawLine::OList(String::from("1. a list"))),
             PurifiedMdLine::OList {
                 list_number: 1,
                 list_text: String::from("a list")
@@ -302,7 +302,7 @@ mod purifier_testing {
 
         // take the space with you
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::OList(String::from("1. \ta list"))),
+            PurifiedMdLine::purify(MdRawLine::OList(String::from("1. \ta list"))),
             PurifiedMdLine::OList {
                 list_number: 1,
                 list_text: String::from("\ta list")
@@ -316,7 +316,7 @@ mod purifier_testing {
     fn ulist_purifier_test() {
         // test ok
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::UList("- hello list is here".to_string())),
+            PurifiedMdLine::purify(MdRawLine::UList("- hello list is here".to_string())),
             PurifiedMdLine::UList {
                 list_text: "hello list is here".to_string()
             }
@@ -324,7 +324,7 @@ mod purifier_testing {
 
         // take the spaces with you
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::UList("-  hello list is here".to_string())),
+            PurifiedMdLine::purify(MdRawLine::UList("-  hello list is here".to_string())),
             PurifiedMdLine::UList {
                 list_text: " hello list is here".to_string()
             }
@@ -335,7 +335,7 @@ mod purifier_testing {
     fn image_purifier_test() {
         // test ok
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Image(String::from("![alt text](image.jpg)"))),
+            PurifiedMdLine::purify(MdRawLine::Image(String::from("![alt text](image.jpg)"))),
             PurifiedMdLine::Image {
                 alt_text: "alt text".to_string(),
                 link_text: "image.jpg".to_string()
@@ -344,7 +344,7 @@ mod purifier_testing {
 
         // spaces should be ignored
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Image(String::from("![alt text](image.jpg) "))),
+            PurifiedMdLine::purify(MdRawLine::Image(String::from("![alt text](image.jpg) "))),
             PurifiedMdLine::Image {
                 alt_text: "alt text".to_string(),
                 link_text: "image.jpg".to_string()
@@ -360,7 +360,7 @@ mod purifier_testing {
 
         // space in between [] () should fail
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Image(String::from("![alt text] (image.jpg) "))),
+            PurifiedMdLine::purify(MdRawLine::Image(String::from("![alt text] (image.jpg) "))),
             PurifiedMdLine::FailedText("![alt text] (image.jpg) ".to_string())
         );
     }
@@ -368,7 +368,7 @@ mod purifier_testing {
     #[test]
     fn table_purifier_test() {
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Table("| hello | world |".to_string())),
+            PurifiedMdLine::purify(MdRawLine::Table("| hello | world |".to_string())),
             PurifiedMdLine::Table {
                 row: vec![" hello ".to_string(), " world ".to_string()]
             }
@@ -376,7 +376,7 @@ mod purifier_testing {
 
         // avoid preceding spaces
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Table("| hello | world | ".to_string())),
+            PurifiedMdLine::purify(MdRawLine::Table("| hello | world | ".to_string())),
             PurifiedMdLine::Table {
                 row: vec![" hello ".to_string(), " world ".to_string()]
             }
@@ -384,7 +384,7 @@ mod purifier_testing {
 
         // should only end with |
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Table("| hello | world  ".to_string())),
+            PurifiedMdLine::purify(MdRawLine::Table("| hello | world  ".to_string())),
             PurifiedMdLine::FailedText("| hello | world  ".to_string())
         );
     }
@@ -393,7 +393,7 @@ mod purifier_testing {
     fn definition_purifier_test() {
         // test all trimmed and saved
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::Definition(": the definition   \t".to_string())),
+            PurifiedMdLine::purify(MdRawLine::Definition(": the definition   \t".to_string())),
             PurifiedMdLine::Definition {
                 def_text: "the definition".to_string()
             }
@@ -404,14 +404,14 @@ mod purifier_testing {
     fn tasked_purifier_test() {
         // this will only get lines starting with "- [ ] " or "- [X] "
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::TaskLine("- [ ] todo 1".to_string())),
+            PurifiedMdLine::purify(MdRawLine::TaskLine("- [ ] todo 1".to_string())),
             PurifiedMdLine::TaskedLine {
                 task_text: "todo 1".to_string(),
                 done: false
             }
         );
         assert_eq!(
-            PurifiedMdLine::purify(MdLine::TaskLine("- [X] todo 1".to_string())),
+            PurifiedMdLine::purify(MdRawLine::TaskLine("- [X] todo 1".to_string())),
             PurifiedMdLine::TaskedLine {
                 task_text: "todo 1".to_string(),
                 done: true
