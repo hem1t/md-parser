@@ -13,13 +13,12 @@ pub(crate) enum MdRawLine {
     /// Table lines start with |
     Table(String),
     /// make code skip until finds another `CodeEnd`
-    CodeStart,
-    CodeEnd,
+    CodeBlock,
     /// starts with `: `
     Definition(String),
     /// starts with `- [X] ` or `- [ ]`
     TaskLine(String),
-    /// start with `\t` or 3 or more spaces
+    /// start with `\t`
     TabbedLine(String),
     HR,
     Text(String),
@@ -27,48 +26,40 @@ pub(crate) enum MdRawLine {
     EmptyLine,
 }
 
-pub fn to_mdlines(lines: Vec<String>) -> Vec<MdRawLine> {
-    let mut in_code_block = false;
+pub fn to_mdline(line: String) -> MdRawLine {
+    if line.starts_with("#") {
+        MdRawLine::Head(line.clone())
+    } else if line.starts_with("> ") {
+        MdRawLine::Quote(line)
+    } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
+        MdRawLine::TaskLine(line)
+    } else if starts_with_ordered_list_pattern(&line) {
+        MdRawLine::OList(line)
+    } else if line.starts_with("- ") {
+        MdRawLine::UList(line)
+    } else if line.starts_with("---") {
+        MdRawLine::HR
+    } else if line.starts_with("![") {
+        MdRawLine::Image(line)
+    } else if line.starts_with("|") {
+        MdRawLine::Table(line)
+    } else if line.starts_with("```") {
+        MdRawLine::CodeBlock
+    } else if line.starts_with(": ") {
+        MdRawLine::Definition(line)
+    } else if line.starts_with('\t') {
+        MdRawLine::TabbedLine(line)
+    } else if line.starts_with("\n") {
+        MdRawLine::EmptyLine
+    } else {
+        MdRawLine::Text(line.clone())
+    }
+}
 
+pub fn to_mdlines(lines: Vec<String>) -> Vec<MdRawLine> {
     lines
         .into_iter()
-        .map(|line| {
-            if in_code_block {
-                // skip until not find `CodeEnd`
-                if line.starts_with("```") {
-                    in_code_block = false;
-                    MdRawLine::CodeEnd
-                } else {
-                    MdRawLine::Text(line)
-                }
-            } else if line.starts_with("#") {
-                MdRawLine::Head(line.clone())
-            } else if line.starts_with("> ") {
-                MdRawLine::Quote(line)
-            } else if line.starts_with("- [ ] ") || line.starts_with("- [X] ") {
-                MdRawLine::TaskLine(line)
-            } else if starts_with_ordered_list_pattern(&line) {
-                MdRawLine::OList(line)
-            } else if line.starts_with("- ") {
-                MdRawLine::UList(line)
-            } else if line.starts_with("---") {
-                MdRawLine::HR
-            } else if line.starts_with("![") {
-                MdRawLine::Image(line)
-            } else if line.starts_with("|") {
-                MdRawLine::Table(line)
-            } else if line.starts_with("```") {
-                // note in_code_block here
-                in_code_block = true;
-                MdRawLine::CodeStart
-            } else if line.starts_with(": ") {
-                MdRawLine::Definition(line)
-            } else if line.starts_with("\n") {
-                MdRawLine::EmptyLine
-            } else {
-                MdRawLine::Text(line.clone())
-            }
-        })
+        .map(|line| to_mdline(line))
         .collect::<Vec<MdRawLine>>()
 }
 

@@ -1,4 +1,4 @@
-use crate::md_line_reader::{to_mdlines, MdRawLine};
+use crate::md_line_reader::{to_mdline, to_mdlines, MdRawLine};
 
 ///
 /// Here lies implimentations for MdLine
@@ -41,13 +41,15 @@ enum PurifiedMdLine {
         task_text: String,
         done: bool,
     },
-    TabbedLine(String),
+    TabbedLine {
+        level: u8,
+        text: Box<PurifiedMdLine>,
+    },
     FailedText(String),
     EmptyLine,
-    CodeStart,
-    CodeEnd,
     HR,
     Text(String),
+    CodeBlock,
 }
 
 impl PurifiedMdLine {
@@ -59,11 +61,10 @@ impl PurifiedMdLine {
             MdRawLine::UList(s) => PurifiedMdLine::purify_ulist(s),
             MdRawLine::Image(s) => PurifiedMdLine::purify_image(s),
             MdRawLine::Table(s) => PurifiedMdLine::purify_table(s),
-            MdRawLine::CodeStart => PurifiedMdLine::CodeStart,
-            MdRawLine::CodeEnd => PurifiedMdLine::CodeEnd,
+            MdRawLine::CodeBlock => PurifiedMdLine::CodeBlock,
             MdRawLine::Definition(s) => PurifiedMdLine::purify_definition(s),
             MdRawLine::TaskLine(s) => PurifiedMdLine::purify_taskline(s),
-            MdRawLine::TabbedLine(s) => PurifiedMdLine::TabbedLine(s),
+            MdRawLine::TabbedLine(s) => PurifiedMdLine::purify_tabbedline(s),
             MdRawLine::HR => PurifiedMdLine::HR,
             MdRawLine::Text(s) => PurifiedMdLine::Text(s),
             MdRawLine::EmptyLine => PurifiedMdLine::EmptyLine,
@@ -123,12 +124,9 @@ impl PurifiedMdLine {
             let data = quotes.split_off(space_position);
             PurifiedMdLine::Quote {
                 nest_level: quotes.len() as u8,
-                inside_md: Box::new(PurifiedMdLine::purify(
-                    to_mdlines(vec![data.get(1..).unwrap().to_string()])
-                        .first()
-                        .unwrap()
-                        .clone(),
-                )),
+                inside_md: Box::new(PurifiedMdLine::purify(to_mdline(
+                    data.get(1..).unwrap().to_string(),
+                ))),
             }
         } else {
             PurifiedMdLine::FailedText(quotes)
@@ -219,6 +217,21 @@ impl PurifiedMdLine {
             PurifiedMdLine::FailedText(data)
         }
     }
+
+    pub fn purify_tabbedline(mut data: String) -> PurifiedMdLine {
+        // 1. count tabs
+        for (i, ch) in data.char_indices() {
+            if ch != '\t' {
+                return PurifiedMdLine::TabbedLine {
+                    level: i as u8,
+                    text: Box::new(PurifiedMdLine::purify(to_mdline(
+                        data.split_off(i).to_owned(),
+                    ))),
+                };
+            }
+        }
+        PurifiedMdLine::FailedText(data)
+    }
 }
 
 #[cfg(test)]
@@ -277,10 +290,10 @@ mod purifier_testing {
 
         // should only trim one space from inside_md
         assert_eq!(
-            PurifiedMdLine::purify(MdRawLine::Quote(String::from("> \t blockquote"))),
+            PurifiedMdLine::purify(MdRawLine::Quote(String::from(">  blockquote"))),
             PurifiedMdLine::Quote {
                 nest_level: 1,
-                inside_md: Box::new(PurifiedMdLine::Text(String::from("\t blockquote")))
+                inside_md: Box::new(PurifiedMdLine::Text(String::from(" blockquote")))
             }
         );
 
@@ -434,6 +447,29 @@ mod purifier_testing {
             PurifiedMdLine::TaskedLine {
                 task_text: "todo 1".to_string(),
                 done: true
+            }
+        );
+    }
+
+    #[test]
+    fn tabbed_purifier_test() {
+        assert_eq!(
+            PurifiedMdLine::purify(MdRawLine::TabbedLine("\t\tdfj".to_string())),
+            PurifiedMdLine::TabbedLine {
+                level: 2,
+                text: Box::new(PurifiedMdLine::Text("dfj".to_string()))
+            }
+        );
+
+        // send the for further evaluation
+        assert_eq!(
+            PurifiedMdLine::purify(MdRawLine::TabbedLine("\t\t1. dfj".to_string())),
+            PurifiedMdLine::TabbedLine {
+                level: 2,
+                text: Box::new(PurifiedMdLine::OList {
+                    list_number: 1,
+                    list_text: "dfj".to_string()
+                })
             }
         );
     }
