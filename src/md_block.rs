@@ -5,12 +5,15 @@ use crate::md_inline_parser::MdString;
 ///
 /// blocks will hold multiple lines at once whereever the lines are related
 /// blocks will also convert all the strings to MdString.
+///
 
+#[derive(Debug)]
 pub(crate) enum TableRow {
     Heading,
     Data,
 }
 
+#[derive(Debug)]
 pub(crate) enum MdBlock {
     Head {
         level: u8,
