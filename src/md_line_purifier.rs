@@ -10,7 +10,7 @@ use crate::md_line_reader::{to_mdline, to_mdlines, MdRawLine};
 ///
 
 #[derive(Debug, PartialEq)]
-enum PurifiedMdLine {
+pub(crate) enum PurifiedMdLine {
     Head {
         title: String,
         level: u8,

@@ -1,11 +1,4 @@
-use crate::md_inline_parser::MdString;
-
-///
-/// here we create blocks
-///
-/// blocks will hold multiple lines at once whereever the lines are related
-/// blocks will also convert all the strings to MdString.
-///
+use crate::{md_inline_parser::md_string::MdString, md_line_purifier::PurifiedMdLine};
 
 #[derive(Debug)]
 pub(crate) enum TableRow {
@@ -13,6 +6,12 @@ pub(crate) enum TableRow {
     Data,
 }
 
+///
+/// here we create blocks
+///
+/// blocks will hold multiple lines at once whereever the lines are related
+/// blocks will also convert all the strings to MdString.
+///
 #[derive(Debug)]
 pub(crate) enum MdBlock {
     Head {
@@ -45,7 +44,27 @@ pub(crate) enum MdBlock {
         tast_text: MdString,
     },
     CodeBlock(String),
-    Parah(MdString),
+    Parah(Vec<MdString>),
     HR,
     EmptyLine,
+}
+
+
+///
+/// takes `PurifiedMdLine`s and converts it to Vec of `MdBlock`
+///
+pub(crate) struct MdBlockParser {
+    blocks: Vec<MdBlock>,
+}
+
+impl MdBlockParser {
+    pub fn new() -> Self {
+        MdBlockParser {
+            blocks: Vec::new()
+        }
+    }
+
+    pub fn parse(lines: Vec<PurifiedMdLine>) -> Self {
+        unimplemented!()
+    }
 }
