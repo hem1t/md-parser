@@ -1,3 +1,4 @@
+#![allow(unused)]
 #[derive(Debug, PartialEq)]
 pub enum InlineToken {
     Escape,
@@ -12,8 +13,8 @@ pub enum InlineToken {
     // ()
     CircleOpen,
     CircleClose,
-    // ^
-    Carat,
+    // [^
+    FootnoteOpen,
     // ~
     Strike,
     DoubleStrike,
@@ -22,6 +23,7 @@ pub enum InlineToken {
     DoubleEqual,
     Plain(String)
 }
+
 use InlineToken::*;
 
 fn tokenize(data: String) -> Vec<InlineToken> {
@@ -53,7 +55,11 @@ fn tokenize(data: String) -> Vec<InlineToken> {
                 tokens.push(CircleClose);
             },
             '^' => {
-                tokens.push(Carat);
+                if let Some(token) = tokens.last_mut().filter(|t| *t == &SquareOpen) {
+                    *token = FootnoteOpen;
+                } else {
+                    tokens.push(Plain('^'.to_string()));
+                }
             },
             '~' => {
                 if let Some(token) = tokens.last_mut().filter(|t| *t == &Strike) {

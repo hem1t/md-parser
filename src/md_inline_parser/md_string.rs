@@ -1,3 +1,4 @@
+#![allow(unused)]
 use super::md_inline::MdInline;
 
 #[derive(Debug)]
