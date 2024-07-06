@@ -1,8 +1,5 @@
-mod md_line_purifier;
-mod md_line_reader;
-mod md_block;
-mod md_inline_parser;
+use md_parser;
 
 fn main() {
-    
+    md_parser::parser_md("dsjf".to_string());
 }

@@ -1,4 +1,3 @@
-#![allow(unused)]
 #[derive(Debug, PartialEq)]
 pub enum InlineToken {
     Escape,

@@ -1,4 +1,3 @@
-#![allow(unused)]
 ///
 /// After Blocks have been parsed we come here
 /// to find Inline Elements
