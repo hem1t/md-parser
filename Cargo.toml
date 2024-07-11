@@ -3,5 +3,8 @@ name = "md-parser-rust"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+members = [ "md_parser" ]
+
 [dependencies]
 md_parser = { path = "md_parser" }
