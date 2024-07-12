@@ -13,6 +13,7 @@ pub enum InlineToken {
     CircleOpen,
     CircleClose,
     // [^
+    Carat,
     FootnoteOpen,
     // ~
     Strike,
@@ -77,7 +78,7 @@ pub(crate) fn tokenize(data: String) -> Vec<InlineToken> {
                 if let Some(token) = tokens.last_mut_if(|t| *t == SquareOpen) {
                     *token = FootnoteOpen;
                 } else {
-                    push_to_plain!(tokens, ch);
+                    tokens.push(Carat);
                 }
             }
             '~' => {
@@ -172,7 +173,7 @@ fn test_inline_footnote() {
     );
     assert_eq!(
         tokenize("\\[^1]".to_string()),
-        vec![Plain("[^1".to_string()), SquareClose]
+        vec![Plain("[".to_string()), Carat, Plain("1".to_string()), SquareClose]
     );
     assert_eq!(
         tokenize("[\\^1]".to_string()),
