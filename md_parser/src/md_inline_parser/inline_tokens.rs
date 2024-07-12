@@ -4,6 +4,7 @@ pub enum InlineToken {
     // *
     Star,
     DoubleStar,
+    TripleStar,
     // \`
     Quote,
     // []
@@ -53,10 +54,10 @@ pub(crate) fn tokenize(data: String) -> Vec<InlineToken> {
                 tokens.push(Escape);
             }
             '*' => {
-                if let Some(token) = tokens.last_mut_if(|t| *t == Star) {
-                    *token = DoubleStar;
-                } else {
-                    tokens.push(Star);
+                match tokens.last_mut() {
+                    Some(token) if *token == Star => *token = DoubleStar,
+                    Some(token) if *token == DoubleStar => *token = TripleStar,
+                    _ => tokens.push(Star)
                 }
             }
             '`' => {
@@ -129,6 +130,10 @@ fn test_inline_star() {
     assert_eq!(
         tokenize("*bold*".to_string()),
         vec![Star, Plain("bold".to_string()), Star]
+    );
+    assert_eq!(
+        tokenize("***bold***".to_string()),
+        vec![TripleStar, Plain("bold".to_string()), TripleStar]
     );
 }
 
