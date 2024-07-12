@@ -3,6 +3,7 @@ pub enum InlineToken {
     Escape,
     // *
     Star,
+    DoubleStar,
     // \`
     Quote,
     // []
@@ -15,8 +16,10 @@ pub enum InlineToken {
     FootnoteOpen,
     // ~
     Strike,
+    DoubleStrike,
     // ==
     Equal,
+    DoubleEqual,
     Plain(String),
 }
 
@@ -34,7 +37,7 @@ macro_rules! push_to_plain {
     };
 }
 
-fn tokenize(data: String) -> Vec<InlineToken> {
+pub(crate) fn tokenize(data: String) -> Vec<InlineToken> {
     let mut tokens = vec![];
 
     for ch in data.chars() {
@@ -49,7 +52,11 @@ fn tokenize(data: String) -> Vec<InlineToken> {
                 tokens.push(Escape);
             }
             '*' => {
-                tokens.push(Star);
+                if let Some(token) = tokens.last_mut_if(|t| *t == Star) {
+                    *token = DoubleStar;
+                } else {
+                    tokens.push(Star);
+                }
             }
             '`' => {
                 tokens.push(Quote);
@@ -74,10 +81,18 @@ fn tokenize(data: String) -> Vec<InlineToken> {
                 }
             }
             '~' => {
-                tokens.push(Strike);
+                if let Some(token) = tokens.last_mut_if(|t| *t == Strike) {
+                    *token = DoubleStrike;
+                } else {
+                    tokens.push(Strike);
+                }
             }
             '=' => {
-                tokens.push(Equal);
+                if let Some(token) = tokens.last_mut_if(|t| *t == Equal) {
+                    *token = DoubleEqual;
+                } else {
+                    tokens.push(Equal);
+                }
             }
             ch => {
                 push_to_plain!(tokens, ch);
@@ -96,12 +111,10 @@ fn test_inline_tokens() {
         vec![
             Quote,
             Plain("code ".to_string()),
-            Star,
-            Star,
+            DoubleStar,
             Plain("bold".to_string()),
-            Star,
-            Star,
-            Quote
+            DoubleStar,
+            Quote,
         ]
     );
 }
@@ -110,7 +123,7 @@ fn test_inline_tokens() {
 fn test_inline_star() {
     assert_eq!(
         tokenize("**bold**".to_string()),
-        vec![Star, Star, Plain("bold".to_string()), Star, Star]
+        vec![DoubleStar, Plain("bold".to_string()), DoubleStar]
     );
     assert_eq!(
         tokenize("*bold*".to_string()),
@@ -122,7 +135,7 @@ fn test_inline_star() {
 fn test_inline_equal() {
     assert_eq!(
         tokenize("==bold==".to_string()),
-        vec![Equal, Equal, Plain("bold".to_string()), Equal, Equal]
+        vec![DoubleEqual, Plain("bold".to_string()), DoubleEqual]
     );
     assert_eq!(
         tokenize("=bold=".to_string()),
@@ -138,8 +151,7 @@ fn test_inline_escape() {
             Plain("*".to_string()),
             Star,
             Plain("bold".to_string()),
-            Star,
-            Star
+            DoubleStar
         ]
     );
     assert_eq!(
