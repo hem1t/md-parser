@@ -7,6 +7,7 @@ pub enum InlineToken {
     TripleStar,
     // \`
     Quote,
+    DoubleQuote,
     // []
     SquareOpen,
     SquareClose,
@@ -61,7 +62,10 @@ pub(crate) fn tokenize(data: String) -> Vec<InlineToken> {
                 }
             }
             '`' => {
-                tokens.push(Quote);
+                match tokens.last_mut() {
+                    Some(token) if *token == Quote => *token = DoubleQuote,
+                    _ => tokens.push(Quote)
+                }
             }
             '[' => {
                 tokens.push(SquareOpen);
@@ -76,24 +80,21 @@ pub(crate) fn tokenize(data: String) -> Vec<InlineToken> {
                 tokens.push(CircleClose);
             }
             '^' => {
-                if let Some(token) = tokens.last_mut_if(|t| *t == SquareOpen) {
-                    *token = FootnoteOpen;
-                } else {
-                    tokens.push(Carat);
+                match tokens.last_mut() {
+                    Some(token) if *token == SquareOpen => *token = FootnoteOpen,
+                    _ => tokens.push(Carat)
                 }
             }
             '~' => {
-                if let Some(token) = tokens.last_mut_if(|t| *t == Strike) {
-                    *token = DoubleStrike;
-                } else {
-                    tokens.push(Strike);
+                match tokens.last_mut() {
+                    Some(token) if *token == Strike => *token = DoubleStrike,
+                    _ => tokens.push(Strike)
                 }
             }
             '=' => {
-                if let Some(token) = tokens.last_mut_if(|t| *t == Equal) {
-                    *token = DoubleEqual;
-                } else {
-                    tokens.push(Equal);
+                match tokens.last_mut() {
+                    Some(token) if token == Equal => *token = DoubleEqual,
+                    _ => tokens.push(Equal)
                 }
             }
             ch => {
