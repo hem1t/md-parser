@@ -1,3 +1,4 @@
+#![feature(allocator_api)]
 #![allow(unused)]
 mod md_line_purifier;
 mod md_block;

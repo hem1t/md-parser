@@ -20,68 +20,54 @@ pub enum InlineToken {
     Plain(String),
 }
 
-macro_rules! skip_if_escape {
-    ($tokens:ident, $ch:ident) => {
-        if let Some(token) = $tokens.last_mut().filter(|t| *t == &Escape) {
-            *token = Plain($ch.to_string());
-            continue;
-        }
-    };
-}
-
 use InlineToken::*;
+
+use crate::md_inline_parser::VecLastMutIfMatch;
 
 fn tokenize(data: String) -> Vec<InlineToken> {
     let mut tokens = vec![];
 
     for ch in data.chars() {
+        if let Some(token) = tokens.last_mut_if(|t| t == &Escape) {
+            *token = Plain(ch.to_string());
+            continue;
+        }
         match ch {
             '\\' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(Escape);
             }
             '*' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(Star);
             }
             '`' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(Quote);
             }
             '[' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(SquareOpen);
             }
             ']' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(SquareClose);
             }
             '(' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(CircleOpen);
             }
             ')' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(CircleClose);
             }
             '^' => {
-                skip_if_escape!(tokens, ch);
-                if let Some(token) = tokens.last_mut().filter(|t| *t == &SquareOpen) {
+                if let Some(token) = tokens.last_mut_if(|t| *t == SquareOpen) {
                     *token = FootnoteOpen;
                 } else {
                     tokens.push(Plain('^'.to_string()));
                 }
             }
             '~' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(Strike);
             }
             '=' => {
-                skip_if_escape!(tokens, ch);
                 tokens.push(Equal);
             }
             ch => {
-                skip_if_escape!(tokens, ch);
                 if let Some(Plain(s)) = tokens.last_mut() {
                     s.push(ch);
                 } else {
@@ -172,4 +158,5 @@ fn test_inline_footnote() {
         tokenize("[\\^1]".to_string()),
         vec![SquareOpen, Plain("^1".to_string()), SquareClose]
     );
+
 }
