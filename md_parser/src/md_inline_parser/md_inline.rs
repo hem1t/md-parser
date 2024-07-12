@@ -48,6 +48,7 @@ pub fn from_tokens_to_mdinline(
         ($till:expr, $make:expr) => {{
             let mut i_md_string = MdString::new();
             from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till), true);
+            // TODO: merge i_md_string
             md_string.push($make(i_md_string));
         }};
     }
@@ -176,6 +177,22 @@ fn test_mdline_link() {
 
     let result = MdString::from_vec(vec![MdInline::LinkUrl(MdString::from_vec(vec![
         InlineString("**bold text**".to_string()),
+    ]))]);
+    assert_eq!(md_string, result);
+}
+
+#[test]
+fn test_mdline_footnote() {
+    let mut md_string = MdString::new();
+    from_tokens_to_mdinline(
+        dbg!(&mut inline_tokens::tokenize("[^123]".to_string()).iter()),
+        &mut md_string,
+        None,
+        false,
+    );
+
+    let result = MdString::from_vec(vec![MdInline::Footnote(MdString::from_vec(vec![
+        MdInline::InlineString("123".to_string()),
     ]))]);
     assert_eq!(md_string, result);
 }
