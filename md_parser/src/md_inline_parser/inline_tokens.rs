@@ -24,12 +24,24 @@ use InlineToken::*;
 
 use crate::md_inline_parser::VecLastMutIfMatch;
 
+macro_rules! push_to_plain {
+    ($tokens:ident, $ch:ident) => {
+        if let Some(Plain(s)) = $tokens.last_mut() {
+            s.push($ch);
+        } else {
+            $tokens.push(Plain(String::from($ch)));
+        }
+    };
+}
+
 fn tokenize(data: String) -> Vec<InlineToken> {
     let mut tokens = vec![];
 
     for ch in data.chars() {
-        if let Some(token) = tokens.last_mut_if(|t| t == &Escape) {
-            *token = Plain(ch.to_string());
+        // if escape then skip
+        if let Some(Escape) = tokens.last() {
+            tokens.pop();
+            push_to_plain!(tokens, ch);
             continue;
         }
         match ch {
@@ -58,7 +70,7 @@ fn tokenize(data: String) -> Vec<InlineToken> {
                 if let Some(token) = tokens.last_mut_if(|t| *t == SquareOpen) {
                     *token = FootnoteOpen;
                 } else {
-                    tokens.push(Plain('^'.to_string()));
+                    push_to_plain!(tokens, ch);
                 }
             }
             '~' => {
@@ -68,11 +80,7 @@ fn tokenize(data: String) -> Vec<InlineToken> {
                 tokens.push(Equal);
             }
             ch => {
-                if let Some(Plain(s)) = tokens.last_mut() {
-                    s.push(ch);
-                } else {
-                    tokens.push(Plain(String::from(ch)));
-                }
+                push_to_plain!(tokens, ch);
             }
         }
     }
@@ -140,7 +148,7 @@ fn test_inline_escape() {
     );
     assert_eq!(
         tokenize("\\=bold\\~".to_string()),
-        vec![Plain("=bold".to_string()), Plain("~".to_string())]
+        vec![Plain("=bold~".to_string())]
     );
 }
 
@@ -148,11 +156,11 @@ fn test_inline_escape() {
 fn test_inline_footnote() {
     assert_eq!(
         tokenize("[^1\\]".to_string()),
-        vec![FootnoteOpen, Plain("1".to_string()), Plain("]".to_string())]
+        vec![FootnoteOpen, Plain("1]".to_string())]
     );
     assert_eq!(
         tokenize("\\[^1]".to_string()),
-        vec![Plain("[".to_string()), Plain("^1".to_string()), SquareClose]
+        vec![Plain("[^1".to_string()), SquareClose]
     );
     assert_eq!(
         tokenize("[\\^1]".to_string()),
