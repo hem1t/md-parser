@@ -2,28 +2,35 @@ use std::slice::Iter;
 
 use crate::md_inline_parser::inline_tokens;
 
-use super::{inline_tokens::InlineToken, VecLastMutIfMatch};
+use super::{inline_tokens::InlineToken, md_string::MdString, VecLastMutIfMatch};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum MdInline {
-    Bold(Box<Vec<MdInline>>),
-    Italic(Box<Vec<MdInline>>),
-    BoldItalic(Box<Vec<MdInline>>),
-    Code(Box<Vec<MdInline>>),
+    Bold(Box<MdString>),
+    Italic(Box<MdString>),
+    BoldItalic(Box<MdString>),
+    Code(Box<MdString>),
+    Strike(Box<MdString>),
+    Highlight(Box<MdString>),
+    Sub(Box<MdString>),
+    Super(Box<MdString>),
     Link(String, String),
-    Strike(Box<Vec<MdInline>>),
-    Highlight(Box<Vec<MdInline>>),
-    Sub(Box<Vec<MdInline>>),
-    Super(Box<Vec<MdInline>>),
     InlineString(String),
-    NoMatch,
 }
 
 use MdInline::*;
 
+impl MdInline {
+    pub fn escape(&self) -> InlineString(String) {
+        match self {
+
+        }
+    }
+}
+
 pub fn from_tokens_to_mdinline(
     tokens: &mut Iter<'_, InlineToken>,
-    md_string: &mut Vec<MdInline>,
+    md_string: &mut MdString,
     until: Option<InlineToken>,
 ) {
     let token = tokens.next();
@@ -35,8 +42,17 @@ pub fn from_tokens_to_mdinline(
 
     macro_rules! enclosed_matches {
         ($till:expr, $make:expr) => {{
-            let mut i_md_string = vec![];
+            let mut i_md_string = MdString::new();
             from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till));
+            md_string.push($make(Box::new(i_md_string)))
+        }};
+    }
+
+    macro_rules! escaped_enclosed_matches {
+        ($till:expr, $make:expr) => {{
+            let mut i_md_string = MdString::new();
+            from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till));
+            i_md_string.escape();
             md_string.push($make(Box::new(i_md_string)))
         }};
     }
@@ -50,10 +66,13 @@ pub fn from_tokens_to_mdinline(
         InlineToken::DoubleEqual => {
             enclosed_matches!(InlineToken::DoubleEqual, MdInline::Highlight)
         }
-        InlineToken::Quote => enclosed_matches!(InlineToken::Quote, MdInline::Code),
         InlineToken::Strike => enclosed_matches!(InlineToken::Strike, MdInline::Super),
         InlineToken::Carat => enclosed_matches!(InlineToken::Carat, MdInline::Sub),
-        InlineToken::SquareOpen => {}
+        InlineToken::Quote => escaped_enclosed_matches!(InlineToken::Quote, MdInline::Code),
+        InlineToken::DoubleQuote => escaped_enclosed_matches!(InlineToken::DoubleQuote, MdInline::Code),
+        InlineToken::SquareOpen => {
+            
+        }
         InlineToken::SquareClose => (),
         InlineToken::CircleOpen => {}
         InlineToken::CircleClose => (),
@@ -116,8 +135,6 @@ fn test_mdline_italic_bold() {
         None,
     );
 
-    let result = vec![BoldItalic(Box::new(vec![InlineString(
-        "Hello Italic & Bold".to_string(),
-    )]))];
+    let result = vec![BoldItalic(Box::new(vec![InlineString("Hello Italic & Bold".to_string())]))];
     assert_eq!(md_string, result);
 }
