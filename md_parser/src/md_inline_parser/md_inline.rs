@@ -6,34 +6,30 @@ use super::{inline_tokens::InlineToken, md_string::MdString, VecLastMutIfMatch};
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum MdInline {
-    Bold(Box<MdString>),
-    Italic(Box<MdString>),
-    BoldItalic(Box<MdString>),
-    Code(Box<MdString>),
-    Strike(Box<MdString>),
-    Highlight(Box<MdString>),
-    Sub(Box<MdString>),
-    Super(Box<MdString>),
-    Link(String, String),
+    Bold(MdString),
+    Italic(MdString),
+    BoldItalic(MdString),
+    Code(MdString),
+    Strike(MdString),
+    Highlight(MdString),
+    Sub(MdString),
+    Super(MdString),
+    LinkText(MdString),
+    LinkUrl(MdString),
+    Footnote(MdString),
     InlineString(String),
 }
 
 use MdInline::*;
 
-impl MdInline {
-    pub fn escape(&self) -> InlineString(String) {
-        match self {
-
-        }
-    }
-}
-
 pub fn from_tokens_to_mdinline(
     tokens: &mut Iter<'_, InlineToken>,
     md_string: &mut MdString,
     until: Option<InlineToken>,
+    escape: bool,
 ) {
     let token = tokens.next();
+    // token == matters, here don't move it
     if token.is_none() || until.as_ref() == token {
         return;
     }
@@ -43,18 +39,25 @@ pub fn from_tokens_to_mdinline(
     macro_rules! enclosed_matches {
         ($till:expr, $make:expr) => {{
             let mut i_md_string = MdString::new();
-            from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till));
-            md_string.push($make(Box::new(i_md_string)))
+            from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till), false);
+            md_string.push($make(i_md_string));
         }};
     }
 
     macro_rules! escaped_enclosed_matches {
         ($till:expr, $make:expr) => {{
             let mut i_md_string = MdString::new();
-            from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till));
-            i_md_string.escape();
-            md_string.push($make(Box::new(i_md_string)))
+            from_tokens_to_mdinline(tokens, &mut i_md_string, Some($till), true);
+            md_string.push($make(i_md_string));
         }};
+    }
+
+    // Inits go above this.
+    // escaping
+    if escape {
+        md_string.push(MdInline::InlineString(token.to_string()));
+        from_tokens_to_mdinline(tokens, md_string, until, true);
+        return;
     }
 
     match token {
@@ -69,14 +72,18 @@ pub fn from_tokens_to_mdinline(
         InlineToken::Strike => enclosed_matches!(InlineToken::Strike, MdInline::Super),
         InlineToken::Carat => enclosed_matches!(InlineToken::Carat, MdInline::Sub),
         InlineToken::Quote => escaped_enclosed_matches!(InlineToken::Quote, MdInline::Code),
-        InlineToken::DoubleQuote => escaped_enclosed_matches!(InlineToken::DoubleQuote, MdInline::Code),
-        InlineToken::SquareOpen => {
-            
+        InlineToken::DoubleQuote => {
+            escaped_enclosed_matches!(InlineToken::DoubleQuote, MdInline::Code)
         }
+        InlineToken::SquareOpen => enclosed_matches!(InlineToken::SquareClose, MdInline::LinkText),
         InlineToken::SquareClose => (),
-        InlineToken::CircleOpen => {}
+        InlineToken::CircleOpen => {
+            escaped_enclosed_matches!(InlineToken::SquareClose, MdInline::LinkUrl)
+        }
         InlineToken::CircleClose => (),
-        InlineToken::FootnoteOpen => todo!(),
+        InlineToken::FootnoteOpen => {
+            escaped_enclosed_matches!(InlineToken::SquareClose, MdInline::Footnote)
+        }
         InlineToken::Equal => md_string.push(InlineString(String::from('='))),
         InlineToken::Plain(f) => {
             if let Some(InlineString(s)) = md_string.last_mut() {
@@ -86,55 +93,89 @@ pub fn from_tokens_to_mdinline(
             }
         }
     }
-    from_tokens_to_mdinline(tokens, md_string, until);
+    from_tokens_to_mdinline(tokens, md_string, until, false);
 }
 
 #[test]
 fn test_mdline_plain() {
-    let mut md_string = vec![];
+    let mut md_string = MdString::new();
     from_tokens_to_mdinline(
         dbg!(&mut inline_tokens::tokenize("Hello World!".to_string()).iter()),
         &mut md_string,
         None,
+        false,
     );
     assert_eq!(
         md_string,
-        vec![MdInline::InlineString("Hello World!".to_string())]
+        MdString::from_vec(vec![MdInline::InlineString("Hello World!".to_string())])
     );
 }
 
 #[test]
 fn test_mdline_string_modifiers() {
-    let mut md_string = vec![];
+    let mut md_string = MdString::new();
     from_tokens_to_mdinline(
         dbg!(&mut inline_tokens::tokenize("Hello \\**dkjf**world\\** !".to_string()).iter()),
         &mut md_string,
         None,
+        false,
     );
 
-    let result = vec![
-        InlineString("Hello *".to_string()),
-        Italic(Box::new(vec![
+    let result = MdString::from_vec(vec![
+        MdInline::InlineString("Hello *".to_string()),
+        MdInline::Italic(MdString::from_vec(vec![
             InlineString("dkjf".to_string()),
-            Bold(Box::new(vec![
+            Bold(MdString::from_vec(vec![
                 InlineString("world*".to_string()),
-                Italic(Box::new(vec![InlineString(" !".to_string())])),
+                Italic(MdString::from_vec(vec![InlineString(" !".to_string())])),
             ])),
         ])),
-    ];
+    ]);
 
     assert_eq!(md_string, result);
 }
 
 #[test]
 fn test_mdline_italic_bold() {
-    let mut md_string = vec![];
+    let mut md_string = MdString::new();
     from_tokens_to_mdinline(
         dbg!(&mut inline_tokens::tokenize("***Hello Italic & Bold***".to_string()).iter()),
         &mut md_string,
         None,
+        false,
     );
 
-    let result = vec![BoldItalic(Box::new(vec![InlineString("Hello Italic & Bold".to_string())]))];
+    let result = MdString::from_vec(vec![BoldItalic(MdString::from_vec(vec![InlineString(
+        "Hello Italic & Bold".to_string(),
+    )]))]);
+    assert_eq!(md_string, result);
+}
+
+#[test]
+fn test_mdline_link() {
+    let mut md_string = MdString::new();
+    from_tokens_to_mdinline(
+        dbg!(&mut inline_tokens::tokenize("[**bold text**]".to_string()).iter()),
+        &mut md_string,
+        None,
+        false,
+    );
+
+    let result = MdString::from_vec(vec![LinkText(MdString::from_vec(vec![Bold(
+        MdString::from_vec(vec![InlineString("bold text".to_string())]),
+    )]))]);
+    assert_eq!(md_string, result);
+
+    let mut md_string = MdString::new();
+    from_tokens_to_mdinline(
+        dbg!(&mut inline_tokens::tokenize("(**bold text**)".to_string()).iter()),
+        &mut md_string,
+        None,
+        false,
+    );
+
+    let result = MdString::from_vec(vec![MdInline::LinkUrl(MdString::from_vec(vec![
+        InlineString("**bold text**".to_string()),
+    ]))]);
     assert_eq!(md_string, result);
 }

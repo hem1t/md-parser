@@ -12,6 +12,12 @@ impl MdString {
         }
     }
 
+    pub fn from_vec(data: Vec<MdInline>) -> Self {
+        MdString {
+            string: data
+        }
+    }
+
     pub fn from_string(data: String) -> MdString {
         unimplemented!()
     }
@@ -22,11 +28,5 @@ impl MdString {
 
     pub fn last_mut(&mut self) -> Option<&mut MdInline> {
         self.string.last_mut()
-    }
-
-    pub fn escape(&mut self) {
-        self.string = self.string.into_iter().map(|inline| {
-            inline.escape()
-        }).collect::<Vec<>>();
     }
 }

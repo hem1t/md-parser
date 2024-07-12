@@ -93,7 +93,7 @@ pub(crate) fn tokenize(data: String) -> Vec<InlineToken> {
             }
             '=' => {
                 match tokens.last_mut() {
-                    Some(token) if token == Equal => *token = DoubleEqual,
+                    Some(token) if *token == Equal => *token = DoubleEqual,
                     _ => tokens.push(Equal)
                 }
             }
@@ -186,4 +186,29 @@ fn test_inline_footnote() {
         vec![SquareOpen, Plain("^1".to_string()), SquareClose]
     );
 
+}
+
+// to_string impl
+impl InlineToken {
+    pub fn to_string(&self) -> String {
+        match self {
+            Escape => "\\".to_string(),
+            Star => "*".to_string(),
+            DoubleStar => "**".to_string(),
+            TripleStar => "***".to_string(),
+            Quote => "`".to_string(),
+            DoubleQuote => "``".to_string(),
+            SquareOpen => "[".to_string(),
+            SquareClose => "]".to_string(),
+            CircleOpen => "(".to_string(),
+            CircleClose => ")".to_string(),
+            Carat => "^".to_string(),
+            FootnoteOpen => "[^".to_string(),
+            Strike => "~".to_string(),
+            DoubleStrike => "~~".to_string(),
+            Equal => "=".to_string(),
+            DoubleEqual => "==".to_string(),
+            Plain(s) => s.to_string(),
+        }
+    }
 }
